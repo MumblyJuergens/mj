@@ -67,4 +67,4 @@ namespace mj
         return internal::CallableMetadata<TCallable>::generatePointer(callable);
     }
 
-} // End of namespace glube.
+} // End namespace mj.

@@ -20,6 +20,7 @@ include(mj)
 add_library(${PROJECT_NAME} STATIC
 "include/mj/lambda.hpp"
 "include/mj/mj.hpp"
+"include/mj/nameof.hpp"
 "src/mj.cpp"
 )
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

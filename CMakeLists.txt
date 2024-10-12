@@ -43,4 +43,6 @@ if (NOT_SUBPROJECT)
       DESTINATION
         ${CMAKE_INSTALL_LIBDIR}
     )
+
+    add_subdirectory("tests")
 endif()

@@ -14,14 +14,14 @@ namespace mj
     };
 
     template <typename T>
-    class Pool
+    class [[nodiscard]] Pool final
     {
         std::vector<T> data;
         std::vector<std::size_t> free;
 
         public:
 
-        class Toy
+        class [[nodiscard]] Toy final
         {
             friend Pool;
             static constexpr std::size_t bad = std::numeric_limits<std::size_t>::max();
@@ -29,12 +29,12 @@ namespace mj
             Pool *pool{};
             std::size_t index{bad};
 
-            Toy(Pool *pool, std::size_t index) : pool{pool}, index{index} {}
+            [[nodiscard]] constexpr Toy(Pool *pool, std::size_t index) noexcept : pool{pool}, index{index} {}
 
         public:
-            Toy() = default;
-            Toy(Toy &&other) noexcept : pool{std::exchange(other.pool, nullptr)}, index{std::exchange(other.index, bad)} {}
-            Toy &operator=(Toy &&other) noexcept
+            [[nodiscard]] constexpr Toy() noexcept = default;
+            [[nodiscard]] constexpr Toy(Toy &&other) noexcept : pool{std::exchange(other.pool, nullptr)}, index{std::exchange(other.index, bad)} {}
+            constexpr Toy &operator=(Toy &&other) noexcept
             {
                 pool = std::exchange(other.pool, nullptr);
                 if (index != bad && pool)
@@ -44,16 +44,16 @@ namespace mj
                 index = std::exchange(other.index, bad);
                 return *this;
             }
-            ~Toy()
+            constexpr ~Toy() noexcept(noexcept(std::vector<std::size_t>{}.push_back(std::size_t{})))
             {
                 if (index != bad && pool)
                 {
                     pool->free.push_back(index);
                 }
             }
-            T *operator->() const { return &pool->data[index]; }
-            T &operator*() const { return pool->data[index]; }
-            operator bool() const noexcept { return index != bad; }
+            [[nodiscard]] constexpr T *operator->() const { return &pool->data[index]; }
+            [[nodiscard]] constexpr T &operator*() const { return pool->data[index]; }
+            [[nodiscard]] constexpr operator bool() const noexcept { return index != bad; }
         };
 
         template <typename... Args>

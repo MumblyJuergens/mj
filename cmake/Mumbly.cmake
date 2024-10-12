@@ -1,19 +1,26 @@
+# A lot of this document is courtesy of Jason Turner (https://github.com/lefticus)
+
 set (MUMBLY_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-macro(MumblyInit)
-    
-    include("${MUMBLY_CURRENT_LIST_DIR}/CPM.cmake")
+include("${MUMBLY_CURRENT_LIST_DIR}/CPM.cmake")
 
+macro(MJEnableIPO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT result OUTPUT output)
     if(result)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
     else()
         message(SEND_ERROR "IPO is not supported: ${output}")
-    endif()
+    endif()    
+endmacro()
+
+
+function(MJFullCompilerWarnings target_name)
+    
+
 
     if (MSVC)
-        add_compile_options(
+        target_compile_options(${target_name} INTERFACE
         /W4 # Baseline reasonable warnings
         /w14242 # 'identifier': conversion from 'type1' to 'type2', possible loss of data
         /w14254 # 'operator': conversion from 'type1:field_bits' to 'type2:field_bits', possible loss of data
@@ -40,7 +47,7 @@ macro(MumblyInit)
         /WX
         )
     else()
-        add_compile_options(
+        target_compile_options(${target_name} INTERFACE
         -Wall
         -Wextra # reasonable and standard
         -Wshadow # warn the user if a variable declaration shadows one from a parent context
@@ -59,7 +66,7 @@ macro(MumblyInit)
         -Werror
         )
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-            add_compile_options(
+            target_compile_options(${target_name} INTERFACE
             -Wmisleading-indentation # warn if indentation implies blocks where blocks do not exist
             -Wduplicated-cond # warn if if / else chain has duplicated conditions
             -Wduplicated-branches # warn if if / else branches have duplicated code
@@ -69,4 +76,4 @@ macro(MumblyInit)
             )
         endif()
     endif()        
-endmacro()
+endfunction()

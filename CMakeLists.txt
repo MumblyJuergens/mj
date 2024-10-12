@@ -18,6 +18,7 @@ project(mj LANGUAGES C CXX)
 include(mj)
 
 add_library(${PROJECT_NAME} STATIC
+"include/mj/lambda.hpp"
 "include/mj/mj.hpp"
 "src/mj.cpp"
 )

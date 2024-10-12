@@ -13,7 +13,6 @@ if (NOT NOT_SUBPROJECT)
   set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" PARENT_SCOPE)
 endif()
 
-
 project(mj LANGUAGES C CXX)
 
 include(mj)

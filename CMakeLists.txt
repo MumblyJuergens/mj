@@ -35,4 +35,10 @@ if (NOT_SUBPROJECT)
         ${CMAKE_CURRENT_BINARY_DIR}/mjConfig.cmake
         INSTALL_DESTINATION  "${CMAKE_INSTALL_LIBDIR}/cmake/mj"
     )
+    install(
+      FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/mjConfig.cmake"
+      DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}
+    )
 endif()

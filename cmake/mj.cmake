@@ -17,8 +17,6 @@ endmacro()
 
 function(MJFullCompilerWarnings target_name)
     
-
-
     if (MSVC)
         target_compile_options(${target_name} INTERFACE
         /W4 # Baseline reasonable warnings
@@ -76,4 +74,24 @@ function(MJFullCompilerWarnings target_name)
             )
         endif()
     endif()        
+endfunction()
+
+# MJLibrarySetup(target INCLUDE_DIR includedir [EXPORT_PREFIX prefix] HEADERS header0 ... headerN)
+function(MJLibrarySetup target_name)
+    set(options)
+    set(oneValueArgs INCLUDE_DIR EXPORT_HEADER_PREFIX)
+    set(multiValueArgs HEADERS)
+    cmake_parse_arguments(PARSE_ARGV 1 mjls "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+    set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "${mjls_HEADERS}")
+    target_include_directories(${target_name} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/${mjls_INCLUDE_DIR}
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>/${mjls_INCLUDE_DIR}
+        $<INSTALL_INTERFACE:${mjls_INCLUDE_DIR}>
+    )
+    if(NOT EXPORT_HEADER_PREFIX IN_LIST mjls_KEYWORDS_MISSING_VALUES)
+        message("Generating ${mjls_INCLUDE_DIR}/${mjls_EXPORT_HEADER_PREFIX}_export.h ...")
+        include(GenerateExportHeader)
+        generate_export_header(${PROJECT_NAME} EXPORT_FILE_NAME "${mjls_INCLUDE_DIR}/${mjls_EXPORT_HEADER_PREFIX}_export.h")
+    endif()
 endfunction()

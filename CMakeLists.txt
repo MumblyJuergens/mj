@@ -13,21 +13,26 @@ if (NOT NOT_SUBPROJECT)
   set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" PARENT_SCOPE)
 endif()
 
-project(mj LANGUAGES C CXX)
-
+project(mj  VERSION 0.0.1
+            DESCRIPTION "C++ and CMake helper library"
+            LANGUAGES CXX)
 include(mj)
 
-add_library(${PROJECT_NAME} STATIC
+set(mj_source 
+"src/mj.cpp"
+)
+set(mj_headers 
 "include/mj/lambda.hpp"
 "include/mj/mj.hpp"
 "include/mj/nameof.hpp"
 "include/mj/pool.hpp"
-"src/mj.cpp"
+"${CMAKE_CURRENT_BINARY_DIR}/include/mj/${PROJECT_NAME}_export.h"
 )
+add_library(${PROJECT_NAME} ${mj_source} ${mj_headers})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-target_include_directories(${PROJECT_NAME} PUBLIC "include")
 MJFullCompilerWarnings(${PROJECT_NAME})
+MJLibrarySetup(${PROJECT_NAME} INCLUDE_DIR include EXPORT_HEADER_PREFIX "mj/mj" HEADERS ${mj_headers})
 
 # I have no clue if this is correct...
 include(GNUInstallDirs)

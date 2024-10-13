@@ -85,8 +85,8 @@ function(MJLibrarySetup target_name)
 
     set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "${mjls_HEADERS}" VISIBILITY_INLINES_HIDDEN YES CXX_VISIBILITY_PRESET hidden)
     target_include_directories(${target_name} PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/${mjls_INCLUDE_DIR}
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>/${mjls_INCLUDE_DIR}
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${mjls_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/${mjls_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:${mjls_INCLUDE_DIR}>
     )
     if(NOT EXPORT_HEADER_PREFIX IN_LIST mjls_KEYWORDS_MISSING_VALUES)

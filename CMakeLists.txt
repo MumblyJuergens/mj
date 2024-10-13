@@ -28,27 +28,13 @@ set(mj_headers
 "include/mj/pool.hpp"
 "${CMAKE_CURRENT_BINARY_DIR}/include/mj/${PROJECT_NAME}_export.h"
 )
-add_library(${PROJECT_NAME} ${mj_source} ${mj_headers})
-add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-MJFullCompilerWarnings(${PROJECT_NAME})
-MJLibrarySetup(${PROJECT_NAME} INCLUDE_DIR include EXPORT_HEADER_PREFIX "mj/mj" HEADERS ${mj_headers})
+add_library(mj ${mj_source} ${mj_headers})
+add_library(mj::mj ALIAS mj)
+target_compile_features(mj PUBLIC cxx_std_23)
+MJFullCompilerWarnings(mj)
+MJLibrarySetup(mj INCLUDE_DIR "include" EXPORT_HEADER_PREFIX "mj/mj" HEADERS ${mj_headers})
 
-# I have no clue if this is correct...
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
 if (NOT_SUBPROJECT)
-    configure_package_config_file(
-        ${CMAKE_CURRENT_LIST_DIR}/cmake/mjConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/mjConfig.cmake
-        INSTALL_DESTINATION  "${CMAKE_INSTALL_LIBDIR}/cmake/mj"
-    )
-    install(
-      FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/mjConfig.cmake"
-      DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}
-    )
-
+    MJLibraryInstallSetup(mj)
     add_subdirectory("tests")
 endif()

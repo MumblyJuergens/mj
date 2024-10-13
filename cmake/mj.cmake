@@ -83,7 +83,7 @@ function(MJLibrarySetup target_name)
     set(multiValueArgs HEADERS)
     cmake_parse_arguments(PARSE_ARGV 1 mjls "${options}" "${oneValueArgs}" "${multiValueArgs}")
 
-    set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "${mjls_HEADERS}")
+    set_target_properties(${target_name} PROPERTIES PUBLIC_HEADER "${mjls_HEADERS}" VISIBILITY_INLINES_HIDDEN YES CXX_VISIBILITY_PRESET hidden)
     target_include_directories(${target_name} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/${mjls_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>/${mjls_INCLUDE_DIR}
@@ -94,4 +94,50 @@ function(MJLibrarySetup target_name)
         include(GenerateExportHeader)
         generate_export_header(${PROJECT_NAME} EXPORT_FILE_NAME "${mjls_INCLUDE_DIR}/${mjls_EXPORT_HEADER_PREFIX}_export.h")
     endif()
+endfunction()
+
+function(MJLibraryInstallSetup target_name)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
+    
+    configure_package_config_file(
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/${target_name}Config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake
+        INSTALL_DESTINATION  "${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}"
+    )
+    install(
+      FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake"
+      DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}
+    )
+
+    write_basic_package_version_file(
+      ${CMAKE_CURRENT_BINARY_DIR}/${target_name}ConfigVersion.cmake
+      VERSION ${PROJECT_VERSION}
+      COMPATIBILITY SameMajorVersion
+    )
+      
+    install(TARGETS ${target_name}
+        EXPORT ${target_name}Targets
+            COMPONENT ${target_name}-lib
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        PUBLIC_HEADER
+            COMPONENT ${target_name}-dev
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${target_name}
+    )
+    export(EXPORT ${target_name}Targets FILE ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Targets.cmake)
+
+    install(EXPORT ${target_name}Targets
+        NAMESPACE ${target_name}::
+        COMPONENT ${target_name}-dev
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}
+    )
+
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/${target_name}ConfigVersion.cmake
+        COMPONENT ${target_name}-dev
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}
+    )
 endfunction()

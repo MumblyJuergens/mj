@@ -23,6 +23,7 @@ set(mj_source
 )
 set(mj_headers 
 "include/mj/lambda.hpp"
+"include/mj/math.hpp"
 "include/mj/mj.hpp"
 "include/mj/nameof.hpp"
 "include/mj/pool.hpp"

@@ -1,6 +1,7 @@
 CPMAddPackage("gh:catchorg/Catch2@3.7.1")
 
 add_executable(${PROJECT_NAME}_tests
+"math_tests.cpp"
 "nameof_tests.cpp"
 "pool_tests.cpp"
 )

@@ -9,3 +9,10 @@ TEST_CASE("minmax easy test", "[math]")
     REQUIRE(min == a);
     REQUIRE(max == b);
 }
+
+TEST_CASE("difference basic test", "[math]")
+{
+    REQUIRE(mj::difference(10, 20) == 10);
+    REQUIRE(mj::difference(-10, 20) == 30);
+    REQUIRE(mj::difference(20, -10) == 30);
+}

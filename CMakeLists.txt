@@ -22,6 +22,7 @@ set(mj_source
 "src/mj.cpp"
 )
 set(mj_headers 
+"include/mj/algorithm.hpp"
 "include/mj/lambda.hpp"
 "include/mj/math.hpp"
 "include/mj/mj.hpp"

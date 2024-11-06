@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <iterator>
 #include <cstddef>
 
 namespace mj
@@ -19,5 +20,17 @@ namespace mj
                 func();
             }
         }
+    }
+
+    template<typename Range, typename Func>
+    constexpr auto sum(Range &&range, Func &&f)
+    {
+        using result_t = std::remove_cvref_t<std::invoke_result_t<Func, decltype(*begin(range))>>;
+        result_t r{};
+        for (auto i = begin(range); i != end(range); ++i)
+        {
+            r += std::invoke(f, *i);
+        }
+        return r;
     }
 }

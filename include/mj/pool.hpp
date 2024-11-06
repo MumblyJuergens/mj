@@ -8,9 +8,9 @@ namespace mj
 {
     enum class PoolToyOrigins
     {
-        New,
-        Used,
-        Error,
+        fresh,
+        used,
+        error,
     };
 
     template <typename T>
@@ -63,10 +63,10 @@ namespace mj
             {
                 Toy toy{this, free.back()};
                 free.pop_back();
-                return {std::move(toy), PoolToyOrigins::Used};
+                return {std::move(toy), PoolToyOrigins::used};
             }
             data.emplace_back(args...);
-            return {Toy{this, data.size() - 1}, PoolToyOrigins::New};
+            return {Toy{this, data.size() - 1}, PoolToyOrigins::fresh};
         }
     };
 

@@ -23,14 +23,14 @@ TEST_CASE("Pool return value optimisation", "[pool]")
 
     auto [mo, status] = pool.get();
 
-    REQUIRE(status == mj::PoolToyOrigins::New);
+    REQUIRE(status == mj::PoolToyOrigins::fresh);
     REQUIRE(mo->moved == 0);
 }
 
 TEST_CASE("Pool moves", "[pool]")
 {
     mj::Pool<MoveOnly> pool;
-    mj::PoolToyOrigins originalReturnType = mj::PoolToyOrigins::Error;
+    mj::PoolToyOrigins originalReturnType = mj::PoolToyOrigins::error;
     {
         auto [mo, status] = pool.get();
         originalReturnType = status;
@@ -39,7 +39,7 @@ TEST_CASE("Pool moves", "[pool]")
     }
     auto [mo, status] = pool.get();
 
-    REQUIRE(originalReturnType == mj::PoolToyOrigins::New);
-    REQUIRE(status == mj::PoolToyOrigins::Used);
+    REQUIRE(originalReturnType == mj::PoolToyOrigins::fresh);
+    REQUIRE(status == mj::PoolToyOrigins::used);
     REQUIRE(mo->moved == 0);
 }

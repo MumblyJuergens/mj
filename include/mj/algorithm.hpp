@@ -1,7 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <ranges>
 #include <type_traits>
-#include <iterator>
 #include <cstddef>
 
 namespace mj
@@ -33,4 +34,46 @@ namespace mj
         }
         return r;
     }
-}
+
+    namespace pissoff {
+
+        template<typename T>
+        struct member_pointer_melper {};
+
+        template<typename T, typename U>
+        struct member_pointer_melper<T U:: *>
+        {
+            using type = T;
+            using clazz = U;
+        };
+
+    } // End namespace pissoff.
+
+    template<typename T>
+    struct member_pointer_types : pissoff::member_pointer_melper<T> {};
+
+    template<typename Func, typename Rhs, typename Comp>
+    static constexpr auto magic_lambda(Func &&func, Comp compare, const Rhs value)
+    {
+        return [func, compare, value](member_pointer_types<Func>::clazz &n)
+            {
+                return std::invoke(compare, std::invoke(func, n), value);
+            };
+    }
+
+    template<typename Rhs, typename Comp>
+    static constexpr auto magic_lambda(Comp compare, const Rhs value)
+    {
+        return [compare, value](Rhs &n)
+            {
+                return std::invoke(compare, n, value);
+            };
+    }
+
+    template<typename ...Args>
+    constexpr auto filter(Args &&...args)
+    {
+        return std::views::filter(magic_lambda(std::forward<Args>(args)...));
+    }
+
+} // End namepspace mj.

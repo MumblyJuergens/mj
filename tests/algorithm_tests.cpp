@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <mj/algorithm.hpp>
+#include <ranges>
 #include <vector>
 
 TEST_CASE("loop test with index", "[algorithm,loop]")
@@ -47,6 +48,75 @@ TEST_CASE("sum object array by member access", "[algorithm,sum]")
     constexpr int expected = 0 + 3 + 1 + 5;
 
     const auto result = mj::sum(vec, &X::a);
+
+    REQUIRE(result == expected);
+}
+
+TEST_CASE("magic_lambda member less test", "[algorithm,magic_lambda]")
+{
+    struct X
+    {
+        int a;
+    };
+    std::vector<X> vec{{0}, {3}, {1}, {5}};
+    constexpr int expected = 0 + 3 + 1;
+    int result{};
+
+    for (const X &x : vec | std::views::filter(mj::magic_lambda(&X::a, std::less{}, 5)))
+    {
+        result += x.a;
+    }
+
+    REQUIRE(result == expected);
+}
+
+TEST_CASE("filter member less test", "[algorithm,filter,magic_lambda]")
+{
+    struct X
+    {
+        int a;
+    };
+    std::vector<X> vec{{0}, {3}, {1}, {5}};
+    constexpr int expected = 0 + 3 + 1;
+    int result{};
+
+    for (const X &x : vec | mj::filter(&X::a, std::less{}, 5))
+    {
+        result += x.a;
+    }
+
+    REQUIRE(result == expected);
+}
+
+TEST_CASE("filter method less test", "[algorithm,filter,magic_lambda]")
+{
+    struct X
+    {
+        int a;
+        int A() { return a; }
+    };
+    std::vector<X> vec{{0}, {3}, {1}, {5}};
+    constexpr int expected = 0 + 3 + 1;
+    int result{};
+
+    for (const X &x : vec | mj::filter(&X::A, std::less{}, 5))
+    {
+        result += x.a;
+    }
+
+    REQUIRE(result == expected);
+}
+
+TEST_CASE("filter value less test", "[algorithm,filter,magic_lambda]")
+{
+    std::vector<int> vec{0, 3, 1, 5};
+    constexpr int expected = 0 + 3 + 1;
+    int result{};
+
+    for (const int &x : vec | mj::filter(std::less{}, 5))
+    {
+        result += x;
+    }
 
     REQUIRE(result == expected);
 }

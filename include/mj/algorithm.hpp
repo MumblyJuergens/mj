@@ -69,6 +69,18 @@ namespace mj
             using clazz = const U;
         };
 
+        template <typename R, typename U, typename... Args>
+        struct Tester<R (U::*)(Args...) noexcept> : std::false_type
+        {
+            using clazz = U;
+        };
+
+        template <typename R, typename U, typename... Args>
+        struct Tester<R (U::*)(Args...) const noexcept> : std::true_type
+        {
+            using clazz = const U;
+        };
+
     public:
         static constexpr bool is_const_mem_fn = Tester<typename std::remove_cv<T>::type>::value;
         using clazz = Tester<T>::clazz;

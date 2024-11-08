@@ -167,7 +167,7 @@ TEST_CASE("magic_callable const method less test", "[algorithm,magic_callable]")
     struct X
     {
         int a;
-        int A() const { return a; }
+        int A() const noexcept { return a; }
     };
 
     const std::vector<X> vec{{0}, {3}, {1}, {5}};

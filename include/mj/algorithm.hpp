@@ -52,7 +52,7 @@ namespace mj
         };
 
         template <typename R, typename U>
-        struct Tester<R U::*> : std::false_type
+        struct Tester<R U::*>
         {
             using clazz = U;
         };
@@ -91,6 +91,29 @@ namespace mj
             return std::invoke(compare, n, value);
         };
     }
+
+    template <typename Func, typename Rhs, typename Comp>
+    struct magic_callable
+    {
+        const Func &func;
+        const Comp &compare;
+        const Rhs value;
+
+        constexpr magic_callable(const Func &func, const Comp &compare, const Rhs value)
+            : func{func}, compare{compare}, value{value}
+        {
+        }
+
+        constexpr auto operator()(member_projection<Func>::clazz &n)
+        {
+            return std::invoke(compare, std::invoke(func, n), value);
+        };
+
+        // constexpr auto operator()(const member_projection<Func>::clazz &n)
+        // {
+        //     return std::invoke(compare, std::invoke(func, n), value);
+        // };
+    };
 
     template <typename... Args>
     constexpr auto filter(Args &&...args)

@@ -116,7 +116,7 @@ TEST_CASE("filter method less const test", "[algorithm,filter,magic_lambda]")
         int a;
         int A() const { return a; }
     };
-    std::vector<X> vec{{0}, {3}, {1}, {5}};
+    const std::vector<X> vec{{0}, {3}, {1}, {5}};
     constexpr int expected = 0 + 3 + 1;
     int result{};
 
@@ -137,6 +137,46 @@ TEST_CASE("filter value less test", "[algorithm,filter,magic_lambda]")
     for (const int &x : vec | mj::filter(std::less{}, 5))
     {
         result += x;
+    }
+
+    REQUIRE(result == expected);
+}
+
+TEST_CASE("magic_callable method less test", "[algorithm,magic_callable]")
+{
+    struct X
+    {
+        int a;
+        int A() { return a; }
+    };
+
+    std::vector<X> vec{{0}, {3}, {1}, {5}};
+    constexpr int expected = 0 + 3 + 1;
+    int result{};
+
+    for (const X &x : vec | std::views::filter(mj::magic_callable(&X::A, std::less{}, 5)))
+    {
+        result += x.a;
+    }
+
+    REQUIRE(result == expected);
+}
+
+TEST_CASE("magic_callable const method less test", "[algorithm,magic_callable]")
+{
+    struct X
+    {
+        int a;
+        int A() const { return a; }
+    };
+
+    const std::vector<X> vec{{0}, {3}, {1}, {5}};
+    constexpr int expected = 0 + 3 + 1;
+    int result{};
+
+    for (const X &x : vec | std::views::filter(mj::magic_callable(&X::A, std::less{}, 5)))
+    {
+        result += x.a;
     }
 
     REQUIRE(result == expected);

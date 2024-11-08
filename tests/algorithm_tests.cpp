@@ -181,3 +181,21 @@ TEST_CASE("magic_callable const method less test", "[algorithm,magic_callable]")
 
     REQUIRE(result == expected);
 }
+
+TEST_CASE("indexed foreach", "[foreach]")
+{
+    struct X
+    {
+        int a;
+        int A() const noexcept { return a; }
+    };
+
+    std::vector<X> vec0{{0}, {3}, {1}, {5}};
+    const std::vector<int> expected{0, 4, 3, 8};
+    std::vector<int> result;
+
+    mj::for_each(vec0, [&](X &x, std::size_t i)
+                 { result.push_back(x.a + static_cast<int>(i)); });
+
+    REQUIRE(result == expected);
+}

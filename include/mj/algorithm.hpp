@@ -133,4 +133,13 @@ namespace mj
         return std::views::filter(magic_lambda(std::forward<Args>(args)...));
     }
 
+    template <typename Range, typename Func>
+    constexpr auto for_each(Range &&range, Func func)
+    {
+        for (std::size_t i{}; i < size(range); ++i)
+        {
+            func(range.at(i), i);
+        }
+    }
+
 } // End namepspace mj.

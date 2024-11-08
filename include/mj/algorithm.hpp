@@ -7,7 +7,7 @@
 
 namespace mj
 {
-    template<typename Func, typename Index = std::size_t>
+    template <typename Func, typename Index = std::size_t>
     constexpr void loop(const Index n, const Func &func)
     {
         for (auto i = Index{}; i < n; ++i)
@@ -23,7 +23,7 @@ namespace mj
         }
     }
 
-    template<typename Range, typename Func>
+    template <typename Range, typename Func>
     constexpr auto sum(Range &&range, Func &&f)
     {
         using result_t = std::remove_cvref_t<std::invoke_result_t<Func, decltype(*begin(range))>>;
@@ -35,42 +35,64 @@ namespace mj
         return r;
     }
 
-    namespace pissoff {
-
-        template<typename T>
-        struct member_pointer_melper {};
-
-        template<typename T, typename U>
-        struct member_pointer_melper<T U:: *>
+    // Courtesy of https://stackoverflow.com/a/15218327/26759349.
+    template <typename T>
+    class member_projection
+    {
+        template <typename U>
+        struct Tester
         {
-            using type = T;
+            static_assert( // will always fail
+                std::is_member_function_pointer<U>::value,
+                "Use member function pointers only!");
+
+            // if you want to report false for types other than
+            // member function pointers you can just derive from
+            // std::false_type instead of asserting
+        };
+
+        template <typename R, typename U>
+        struct Tester<R U::*> : std::false_type
+        {
             using clazz = U;
         };
 
-    } // End namespace pissoff.
+        template <typename R, typename U, typename... Args>
+        struct Tester<R (U::*)(Args...)> : std::false_type
+        {
+            using clazz = U;
+        };
 
-    template<typename T>
-    struct member_pointer_types : pissoff::member_pointer_melper<T> {};
+        template <typename R, typename U, typename... Args>
+        struct Tester<R (U::*)(Args...) const> : std::true_type
+        {
+            using clazz = const U;
+        };
 
-    template<typename Func, typename Rhs, typename Comp>
+    public:
+        static constexpr bool is_const_mem_fn = Tester<typename std::remove_cv<T>::type>::value;
+        using clazz = Tester<T>::clazz;
+    };
+
+    template <typename Func, typename Rhs, typename Comp>
     static constexpr auto magic_lambda(Func &&func, Comp compare, const Rhs value)
     {
-        return [func, compare, value](member_pointer_types<Func>::clazz &n)
-            {
-                return std::invoke(compare, std::invoke(func, n), value);
-            };
+        return [func, compare, value](member_projection<Func>::clazz &n)
+        {
+            return std::invoke(compare, std::invoke(func, n), value);
+        };
     }
 
-    template<typename Rhs, typename Comp>
+    template <typename Rhs, typename Comp>
     static constexpr auto magic_lambda(Comp compare, const Rhs value)
     {
         return [compare, value](Rhs &n)
-            {
-                return std::invoke(compare, n, value);
-            };
+        {
+            return std::invoke(compare, n, value);
+        };
     }
 
-    template<typename ...Args>
+    template <typename... Args>
     constexpr auto filter(Args &&...args)
     {
         return std::views::filter(magic_lambda(std::forward<Args>(args)...));

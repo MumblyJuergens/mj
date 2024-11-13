@@ -21,3 +21,12 @@ TEST_CASE("isize from array size", "[isize]")
     static_assert(std::is_same_v<decltype(result), int>);
     REQUIRE(result == 5);
 }
+
+TEST_CASE("size_t from int", "[sz_t]")
+{
+    int i = 5;
+
+    auto s = mj::sz_t(i);
+
+    static_assert(std::is_same_v<decltype(s), std::size_t>);
+}

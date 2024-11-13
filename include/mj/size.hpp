@@ -11,15 +11,21 @@ namespace mj
 
     template <typename T>
         requires hassize<T>
-    constexpr auto isize(const T &t)
+    constexpr auto isize(const T &t) noexcept
     {
         return static_cast<int>(t.size());
     }
 
     template <typename T, std::size_t N>
-    constexpr auto isize(const T (&)[N])
+    constexpr auto isize(const T (&)[N]) noexcept
     {
         return static_cast<int>(N);
+    }
+
+    template <typename T>
+    constexpr auto sz_t(T t) noexcept
+    {
+        return static_cast<std::size_t>(t);
     }
 
 } // End namespace mj.

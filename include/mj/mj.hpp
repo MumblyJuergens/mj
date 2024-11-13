@@ -6,4 +6,5 @@
 #include "math.hpp"
 #include "nameof.hpp"
 #include "pool.hpp"
+#include "size.hpp"
 #include "mj/mj_export.h"

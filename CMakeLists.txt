@@ -29,6 +29,7 @@ set(mj_headers
 "include/mj/mj.hpp"
 "include/mj/nameof.hpp"
 "include/mj/pool.hpp"
+"include/mj/size.hpp"
 "${CMAKE_CURRENT_BINARY_DIR}/include/mj/${PROJECT_NAME}_export.h"
 )
 add_library(mj ${mj_source} ${mj_headers})

@@ -5,6 +5,7 @@ add_executable(${PROJECT_NAME}_tests
 "math_tests.cpp"
 "nameof_tests.cpp"
 "pool_tests.cpp"
+"size_tests.cpp"
 )
 target_compile_features(${PROJECT_NAME}_tests PUBLIC cxx_std_23)
 target_link_libraries(${PROJECT_NAME}_tests PUBLIC ${PROJECT_NAME} Catch2::Catch2WithMain)

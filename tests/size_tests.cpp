@@ -28,5 +28,18 @@ TEST_CASE("size_t from int", "[sz_t]")
 
     auto s = mj::sz_t(i);
 
-    static_assert(std::is_same_v<decltype(s), std::size_t>);
+    REQUIRE(std::is_same_v<decltype(s), std::size_t>);
+}
+
+TEST_CASE("int from isizeof", "[isizeof]")
+{
+    struct alignas(4) S
+    {
+        std::uint32_t b;
+        std::uint32_t a;
+    };
+
+    constexpr auto s = mj::isizeof<S>;
+
+    REQUIRE(s == 8);
 }

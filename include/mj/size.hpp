@@ -28,4 +28,7 @@ namespace mj
         return static_cast<std::size_t>(t);
     }
 
+    template <typename T>
+    constexpr int isizeof = static_cast<int>(sizeof(T));
+
 } // End namespace mj.

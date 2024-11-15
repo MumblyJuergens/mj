@@ -161,48 +161,49 @@ function(MJLibrarySetup target_name)
     endif()
 endfunction()
 
+# Changed to do nothing until I grok "that is not in any export set" errors.
 function(MJLibraryInstallSetup target_name)
-    include(GNUInstallDirs)
-    include(CMakePackageConfigHelpers)
+    # include(GNUInstallDirs)
+    # include(CMakePackageConfigHelpers)
     
-    configure_package_config_file(
-        ${CMAKE_CURRENT_LIST_DIR}/cmake/${target_name}Config.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake
-        INSTALL_DESTINATION  "${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}"
-    )
-    install(
-      FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake"
-      DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}
-    )
+    # configure_package_config_file(
+    #     ${CMAKE_CURRENT_LIST_DIR}/cmake/${target_name}Config.cmake.in
+    #     ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake
+    #     INSTALL_DESTINATION  "${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}"
+    # )
+    # install(
+    #   FILES
+    #     "${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake"
+    #   DESTINATION
+    #     ${CMAKE_INSTALL_LIBDIR}
+    # )
 
-    write_basic_package_version_file(
-      ${CMAKE_CURRENT_BINARY_DIR}/${target_name}ConfigVersion.cmake
-      VERSION ${PROJECT_VERSION}
-      COMPATIBILITY SameMajorVersion
-    )
+    # write_basic_package_version_file(
+    #   ${CMAKE_CURRENT_BINARY_DIR}/${target_name}ConfigVersion.cmake
+    #   VERSION ${PROJECT_VERSION}
+    #   COMPATIBILITY SameMajorVersion
+    # )
       
-    install(TARGETS ${target_name}
-        EXPORT ${target_name}Targets
-            COMPONENT ${target_name}-lib
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        PUBLIC_HEADER
-            COMPONENT ${target_name}-dev
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${target_name}
-    )
-    export(EXPORT ${target_name}Targets FILE ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Targets.cmake)
+    # install(TARGETS ${target_name}
+    #     EXPORT ${target_name}Targets
+    #         COMPONENT ${target_name}-lib
+    #         DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    #     PUBLIC_HEADER
+    #         COMPONENT ${target_name}-dev
+    #         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${target_name}
+    # )
+    # export(EXPORT ${target_name}Targets FILE ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Targets.cmake)
 
-    install(EXPORT ${target_name}Targets
-        NAMESPACE ${target_name}::
-        COMPONENT ${target_name}-dev
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}
-    )
+    # install(EXPORT ${target_name}Targets
+    #     NAMESPACE ${target_name}::
+    #     COMPONENT ${target_name}-dev
+    #     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}
+    # )
 
-    install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/${target_name}ConfigVersion.cmake
-        COMPONENT ${target_name}-dev
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}
-    )
+    # install(FILES
+    #     ${CMAKE_CURRENT_BINARY_DIR}/${target_name}Config.cmake
+    #     ${CMAKE_CURRENT_BINARY_DIR}/${target_name}ConfigVersion.cmake
+    #     COMPONENT ${target_name}-dev
+    #     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${target_name}
+    # )
 endfunction()

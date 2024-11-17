@@ -18,6 +18,9 @@ project(mj  VERSION 0.0.1
             LANGUAGES CXX)
 include(mj)
 
+include("cmake/CPM.cmake")
+CPMAddPackage("gh:microsoft/GSL#main")
+
 set(mj_source 
 "src/mj.cpp"
 )
@@ -35,6 +38,7 @@ set(mj_headers
 add_library(mj ${mj_source} ${mj_headers})
 add_library(mj::mj ALIAS mj)
 target_compile_features(mj PUBLIC cxx_std_23)
+target_link_libraries(mj PUBLIC Microsoft.GSL::GSL)
 MJFullCompilerWarnings(mj)
 MJLibrarySetup(mj INCLUDE_DIR "include" EXPORT_HEADER_PREFIX "mj/mj" HEADERS ${mj_headers})
 

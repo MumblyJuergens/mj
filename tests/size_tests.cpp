@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <limits>
 #include <vector>
 #include <mj/size.hpp>
 
@@ -42,4 +43,17 @@ TEST_CASE("int from isizeof", "[isizeof]")
     constexpr auto s = mj::isizeof<S>;
 
     REQUIRE(s == 8);
+}
+
+TEST_CASE("isize failure on narrow error", "[isize]")
+{
+    struct S
+    {
+        int i{};
+        std::size_t size() const { return std::numeric_limits<int>::max() + 100ull; }
+    };
+
+    S s;
+
+    REQUIRE_THROWS_AS(mj::isize(s), gsl::narrowing_error);
 }

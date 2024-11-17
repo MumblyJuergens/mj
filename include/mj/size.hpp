@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <gsl/narrow>
 
 namespace mj
 {
@@ -13,22 +14,22 @@ namespace mj
         requires hassize<T>
     constexpr auto isize(const T &t) noexcept
     {
-        return static_cast<int>(t.size());
+        return gsl::narrow<int>(t.size());
     }
 
     template <typename T, std::size_t N>
     constexpr auto isize(const T (&)[N]) noexcept
     {
-        return static_cast<int>(N);
+        return gsl::narrow<int>(N);
     }
 
     template <typename T>
     constexpr auto sz_t(T t) noexcept
     {
-        return static_cast<std::size_t>(t);
+        return gsl::narrow<std::size_t>(t);
     }
 
     template <typename T>
-    constexpr int isizeof = static_cast<int>(sizeof(T));
+    constexpr int isizeof = gsl::narrow<int>(sizeof(T));
 
 } // End namespace mj.

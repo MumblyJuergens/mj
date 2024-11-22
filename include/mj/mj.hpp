@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mj/algorithm.hpp"
+#include "mj/console.hpp"
 #include "mj/iterator.hpp"
 #include "mj/lambda.hpp"
 #include "mj/math.hpp"

@@ -26,6 +26,7 @@ set(mj_source
 )
 set(mj_headers 
 "include/mj/algorithm.hpp"
+"include/mj/console.hpp"
 "include/mj/iterator.hpp"
 "include/mj/lambda.hpp"
 "include/mj/math.hpp"

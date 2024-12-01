@@ -8,5 +8,6 @@
 #include "mj/nameof.hpp"
 #include "mj/pool.hpp"
 #include "mj/size.hpp"
+#include "mj/string.hpp"
 #include "mj/timer.hpp"
 #include "mj/mj_export.h"

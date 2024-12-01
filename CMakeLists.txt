@@ -34,6 +34,7 @@ set(mj_headers
 "include/mj/nameof.hpp"
 "include/mj/pool.hpp"
 "include/mj/size.hpp"
+"include/mj/string.hpp"
 "include/mj/timer.hpp"
 "${CMAKE_CURRENT_BINARY_DIR}/include/mj/${PROJECT_NAME}_export.h"
 )

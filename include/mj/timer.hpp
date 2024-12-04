@@ -25,6 +25,11 @@ namespace mj
         {
             return m_time_elapsed.count();
         }
+
+        [[nodiscard]] auto ms() const noexcept
+        {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(m_time_elapsed);
+        }
     };
 
 } // End of namespace mj.

@@ -3,6 +3,7 @@
 #include <string_view>
 
 #define nameof(x) mj::internal::_nameof(#x, sizeof(x))
+#define nameofc(x) mj::internal::_nameof(#x, sizeof(x)).data()
 #define nameofanything(x) mj::internal::_nameof(#x, 0)
 
 namespace mj::internal

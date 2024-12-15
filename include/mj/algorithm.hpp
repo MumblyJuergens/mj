@@ -23,16 +23,45 @@ namespace mj
         }
     }
 
-    template <typename Range, typename Func>
-    constexpr auto sum(Range &&range, Func &&f)
+    template <typename Range, typename Proj>
+    using sum_result_t = std::decay_t<std::invoke_result_t<Proj &, std::ranges::range_value_t<Range>>>;
+
+    template <std::ranges::input_range Range, typename Proj = std::identity>
+    constexpr auto sum(Range &&range, Proj proj)
     {
-        using result_t = std::remove_cvref_t<std::invoke_result_t<Func, decltype(*begin(range))>>;
-        result_t r{};
+        sum_result_t<Range, Proj> r{};
         for (auto i = begin(range); i != end(range); ++i)
         {
-            r += std::invoke(f, *i);
+            r += std::invoke(proj, *i);
         }
         return r;
+    }
+
+    template <typename R, typename T>
+    R force_explicit_cast(T x) { return static_cast<R>(x); }
+
+    template <std::ranges::input_range Range, typename Proj = std::identity>
+    auto mean(Range &&range, Proj proj = {})
+    {
+        return sum(range, proj) / force_explicit_cast<float>(size(range));
+    }
+
+    template <typename T>
+    auto square(T &&x) { return x * x; };
+
+    template <std::ranges::input_range Range, typename Mean = std::ranges::range_value_t<Range>, typename Proj = std::identity>
+    auto stddev(Range &&range, Mean mean, Proj proj = {})
+    {
+        return sqrt(mj::sum(range, [&](const auto &x) -> Mean
+                            { return square(std::invoke(proj, x) - mean); }) /
+                    force_explicit_cast<float>(size(range)));
+    }
+
+    template <typename Range, typename Proj = std::identity>
+    auto mean_stddev(Range &&range, Proj &&proj = {})
+    {
+        auto mea = mean(range, proj);
+        return std::make_pair(mea, stddev(range, mea, proj));
     }
 
     // Courtesy of https://stackoverflow.com/a/15218327/26759349.

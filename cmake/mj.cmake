@@ -18,7 +18,7 @@ endmacro()
 function(MJFullCompilerWarnings target_name)
     
     if (MSVC)
-        target_compile_options(${target_name} INTERFACE
+        target_compile_options(${target_name} PRIVATE
         /W4 # Baseline reasonable warnings
         /w14242 # 'identifier': conversion from 'type1' to 'type2', possible loss of data
         /w14254 # 'operator': conversion from 'type1:field_bits' to 'type2:field_bits', possible loss of data
@@ -45,7 +45,7 @@ function(MJFullCompilerWarnings target_name)
         /WX
         )
     else()
-        target_compile_options(${target_name} INTERFACE
+        target_compile_options(${target_name} PRIVATE
         -Wall
         -Wextra # reasonable and standard
         -Wshadow # warn the user if a variable declaration shadows one from a parent context
@@ -64,7 +64,7 @@ function(MJFullCompilerWarnings target_name)
         -Werror
         )
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-            target_compile_options(${target_name} INTERFACE
+            target_compile_options(${target_name} PRIVATE
             -Wmisleading-indentation # warn if indentation implies blocks where blocks do not exist
             -Wduplicated-cond # warn if if / else chain has duplicated conditions
             -Wduplicated-branches # warn if if / else branches have duplicated code

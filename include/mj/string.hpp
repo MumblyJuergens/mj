@@ -47,4 +47,16 @@ namespace mj
         return words;
     }
 
+    template <class T, std::size_t N>
+    std::string to_string(const std::array<T, N> &arr)
+    {
+        using namespace std;
+        std::string str("[");
+        for (const auto &v : arr)
+        {
+            str += to_string(v) + ",";
+        }
+        return str + "]";
+    }
+
 } // End namespace mj.

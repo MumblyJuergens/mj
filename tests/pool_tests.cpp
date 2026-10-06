@@ -1,21 +1,6 @@
-#include <utility>
+#include "helpers.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <mj/pool.hpp>
-
-struct [[nodiscard]] MoveOnly
-{
-    int moved{};
-
-    [[nodiscard]] MoveOnly() = default;
-    [[nodiscard]] MoveOnly(MoveOnly &&o) noexcept : moved{std::exchange(o.moved, 0) + 1} {}
-    MoveOnly &operator=(MoveOnly &&o) noexcept
-    {
-        moved = std::exchange(o.moved, 0) + 1;
-        return *this;
-    }
-    MoveOnly(const MoveOnly &) = delete;
-    MoveOnly &operator=(const MoveOnly &) = delete;
-};
 
 TEST_CASE("Pool return value optimisation", "[pool]")
 {

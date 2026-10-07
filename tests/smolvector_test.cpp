@@ -1,4 +1,5 @@
 #include "helpers.hpp"
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <mj/smolvector.hpp>
 
@@ -225,4 +226,40 @@ TEST_CASE("Assing n values to greater", "[smolvector]")
     REQUIRE(CountingAllocator<Counter>::deallocation_calls == 1);
     REQUIRE(CountingAllocator<Counter>::allocations == 12);
     REQUIRE(CountingAllocator<Counter>::deallocations == 8);
+}
+
+TEST_CASE("Assing n values to greater 32", "[smolvector]")
+{
+    Counter::reset();
+    CountingAllocator<Counter>::reset();
+    mj::SmolVector<Counter, CountingAllocator<Counter>, mj::impl::Smol32<Counter>> sv{};
+
+    sv.assign(5, 42);
+    sv.assign(3, 126);
+
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.size() == 3);
+    REQUIRE(sv.at(0).value == 126);
+    REQUIRE(sv.at(1).value == 126);
+    REQUIRE(sv.at(2).value == 126);
+
+    REQUIRE(Counter::value_constructed == 2); // One for each call to assign.
+    REQUIRE(Counter::copy_constructed == 8);  // Each placed in fresh memory (rebuild because capacity changes).
+    REQUIRE(Counter::copy_assigned == 0);     // Because we have a copy constructor.
+    REQUIRE(Counter::move_constructed == 0);  // Shouldn't come up.
+    REQUIRE(Counter::move_assigned == 0);     // Shouldn't come up.
+    REQUIRE(Counter::destructored == 7);      // Original 5 + 2 from calls to assign.
+
+    REQUIRE(CountingAllocator<Counter>::allocation_calls == 2);
+    REQUIRE(CountingAllocator<Counter>::deallocation_calls == 1);
+    REQUIRE(CountingAllocator<Counter>::allocations == 12);
+    REQUIRE(CountingAllocator<Counter>::deallocations == 8);
+}
+
+TEST_CASE("range assignment", "[smolvector]")
+{
+    mj::SmolVector<int> sv{};
+    std::array<int, 5> input{2, 5, 7, 9, 1};
+
+    sv.assign(input.begin(), input.end());
 }

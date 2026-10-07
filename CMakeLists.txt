@@ -18,6 +18,8 @@ project(mj VERSION 0.0.1
   LANGUAGES CXX)
 include(mj)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 include("cmake/CPM.cmake")
 CPMAddPackage("gh:microsoft/GSL#main")
 

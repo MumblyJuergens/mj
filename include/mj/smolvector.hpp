@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mj/math.hpp"
 #include "mj/size.hpp"
 #include <cassert>
 #include <concepts>
@@ -16,9 +17,15 @@ namespace impl
 {
 
 template <typename T>
-struct [[nodiscard]] Smol64 final
+struct [[nodiscard]] Smol64
 {
     T *inner{};
+
+    Smol64 &move_into(Smol64 &&rhs) noexcept
+    {
+        inner = std::exchange(rhs.inner, nullptr);
+        return *this;
+    }
 
     static constexpr size_t LOWER_48 = 0x0000FFFFFFFFFFFF;
 
@@ -27,24 +34,47 @@ struct [[nodiscard]] Smol64 final
         return reinterpret_cast<T *>(reinterpret_cast<size_t>(inner) & LOWER_48);
     }
 
-    [[nodiscard]] constexpr size_t get_size() noexcept { return reinterpret_cast<size_t>(inner) >> 48; }
+    [[nodiscard]] constexpr size_t get_size() const noexcept { return reinterpret_cast<size_t>(inner) >> 48; }
 
     constexpr void make_ptr(T *const ptr, size_t sz) noexcept
     {
         inner = reinterpret_cast<T *>((reinterpret_cast<size_t>(ptr) & LOWER_48) | (sz << 48));
     }
 
-    [[nodiscard]] constexpr static size_t next_pow2(size_t s) noexcept
+    [[nodiscard]] static size_t get_capacity(size_t n) noexcept { return next_pow2(n - 1); }
+    [[nodiscard]] size_t get_capacity() const noexcept { return get_capacity(get_size()); }
+
+    [[nodiscard]] bool get_empty() const noexcept { return !inner; }
+};
+
+template <typename T>
+struct [[nodiscard]] Smol32
+{
+    // As far as I can find, all 32bits are used in the pointer on a modern system.
+    T *inner{};
+    size_t sizer{};
+
+    Smol32 &move_into(Smol32 &&rhs) noexcept
     {
-        s |= s >> 1;
-        s |= s >> 2;
-        s |= s >> 4;
-        s |= s >> 8;
-        s |= s >> 16;
-        return s + 1;
+        inner = std::exchange(rhs.inner, nullptr);
+        sizer = std::exchange(rhs.sizer, 0);
+        return *this;
     }
 
-    [[nodiscard]] size_t get_capacity() noexcept { return next_pow2(get_size() - 1); }
+    [[nodiscard]] T *get_ptr() const noexcept { return inner; }
+
+    [[nodiscard]] constexpr size_t get_size() const noexcept { return sizer; }
+
+    constexpr void make_ptr(T *const ptr, size_t sz) noexcept
+    {
+        inner = ptr;
+        sizer = sz;
+    }
+
+    [[nodiscard]] static size_t get_capacity(size_t n) noexcept { return next_pow2(n - 1); }
+    [[nodiscard]] size_t get_capacity() const noexcept { return get_capacity(get_size()); }
+
+    [[nodiscard]] bool get_empty() const noexcept { return !inner; }
 };
 
 } // namespace impl
@@ -60,48 +90,19 @@ struct [[nodiscard]] Smol64 final
 /// Since capacity always doubles when size reaches capacity, we can
 /// calculate capacity based on the next power of two and avoid storing
 /// it, at the cost of a an occasional calculation.
-template <typename T, typename Allocator = std::allocator<T>>
-class [[nodiscard]] SmolVector final
+template <typename T, typename Allocator = std::allocator<T>,
+          typename Impl = std::conditional_t<sizeof(size_t) == 8, impl::Smol64<T>, impl::Smol32<T>>>
+class [[nodiscard]] SmolVector final : private Impl
 {
-    T *inner{};
     [[no_unique_address]] Allocator _allocator;
-
-    static constexpr size_t LOWER_48 = 0x0000FFFFFFFFFFFF;
-
-    [[nodiscard]] static constexpr T *get_ptr(T *const ptr) noexcept
-    {
-        return reinterpret_cast<T *>(reinterpret_cast<size_t>(ptr) & LOWER_48);
-    }
-
-    [[nodiscard]] static constexpr size_t get_size(T *const ptr) noexcept
-    {
-        return reinterpret_cast<size_t>(ptr) >> 48;
-    }
-
-    [[nodiscard]] static constexpr T *make_ptr(T *const ptr, size_t sz) noexcept
-    {
-        return reinterpret_cast<T *>((reinterpret_cast<size_t>(ptr) & LOWER_48) | (sz << 48));
-    }
 
     constexpr void reset()
     {
-        if (!inner) return;
-        std::destroy_n(get_ptr(inner), size());
-        _allocator.deallocate(get_ptr(inner), capacity());
-        inner = nullptr;
+        if (Impl::get_empty()) return;
+        std::destroy_n(Impl::get_ptr(), size());
+        _allocator.deallocate(Impl::get_ptr(), capacity());
+        Impl::make_ptr(nullptr, 0);
     }
-
-    [[nodiscard]] constexpr static size_t next_pow2(size_t s) noexcept
-    {
-        s |= s >> 1;
-        s |= s >> 2;
-        s |= s >> 4;
-        s |= s >> 8;
-        s |= s >> 16;
-        return s + 1;
-    }
-
-    [[nodiscard]] constexpr static size_t get_capacity(size_t s) noexcept { return next_pow2(s - 1); }
 
     constexpr void grow()
     {
@@ -110,11 +111,11 @@ class [[nodiscard]] SmolVector final
         T *new_inner = _allocator.allocate(new_capacity);
         for (size_t i{}; i < old_size; ++i) {
             // new (new_inner + 1) T{};
-            std::construct_at(new_inner + i, std::move_if_noexcept(*(get_ptr(inner) + i)));
+            std::construct_at(new_inner + i, std::move_if_noexcept(*(Impl::get_ptr() + i)));
         }
         reset();
-        inner = make_ptr(new_inner, old_size);
-        assert(new_inner == get_ptr(inner));
+        Impl::make_ptr(new_inner, old_size);
+        assert(new_inner == Impl::get_ptr());
     }
 
   public:
@@ -133,7 +134,7 @@ class [[nodiscard]] SmolVector final
     constexpr SmolVector &operator=(SmolVector &&rhs) noexcept
     {
         reset();
-        inner = std::exchange(rhs.inner, nullptr);
+        Impl::move_into(std::move(rhs));
         return *this;
     }
 
@@ -141,22 +142,22 @@ class [[nodiscard]] SmolVector final
     constexpr SmolVector &operator=(const SmolVector &rhs)
     {
         reset();
-        T *from = get_ptr(rhs.inner);
+        T *from = rhs.Impl::get_ptr();
         const size_t from_size = rhs.size();
         const size_t from_capacity = next_pow2(from_size);
         T *to = _allocator.allocate(from_capacity);
         for (size_t i{}; i < from_size; ++i) {
             std::construct_at(to + i, *(from + i));
         }
-        inner = make_ptr(to, from_size);
+        Impl::make_ptr(to, from_size);
         return *this;
     }
 
     constexpr ~SmolVector() { reset(); }
 
-    [[nodiscard]] constexpr size_t size() const noexcept { return get_size(inner); }
+    [[nodiscard]] constexpr size_t size() const noexcept { return Impl::get_size(); }
     [[nodiscard]] constexpr int isize() const noexcept { return mj::isize(*this); }
-    [[nodiscard]] constexpr size_t capacity() const noexcept { return get_capacity(size()); }
+    [[nodiscard]] constexpr size_t capacity() const noexcept { return Impl::get_capacity(); }
 
     constexpr void push_back(const T &value)
     {
@@ -164,17 +165,17 @@ class [[nodiscard]] SmolVector final
         if (s >= capacity()) {
             grow();
         }
-        inner = make_ptr(get_ptr(inner), s + 1);
-        *(get_ptr(inner) + s) = value;
+        Impl::make_ptr(Impl::get_ptr(), s + 1);
+        *(Impl::get_ptr() + s) = value;
     }
 
     constexpr void assign(size_t count, const T &value)
     {
         // Because we deduce capacity, we can only use existing memory if the new size
         // would have the same deduced capacity.
-        if (get_capacity(count) != capacity()) {
+        if (Impl::get_capacity(count) != capacity()) {
             reset();
-            T *new_inner = _allocator.allocate(get_capacity(count));
+            T *new_inner = _allocator.allocate(Impl::get_capacity(count));
             for (size_t i{}; i < count; ++i) {
                 if constexpr (std::is_copy_constructible_v<T>) {
                     std::construct_at(new_inner + i, value);
@@ -183,12 +184,12 @@ class [[nodiscard]] SmolVector final
                     new_inner[i] = value;
                 }
             }
-            inner = make_ptr(new_inner, count);
+            Impl::make_ptr(new_inner, count);
             return;
         }
         if (size() >= count) {
             for (size_t i = count; i < size(); ++i) {
-                std::destroy_at(get_ptr(inner) + i);
+                std::destroy_at(Impl::get_ptr() + i);
             }
             for (size_t i{}; i < count; ++i) {
                 this->at(i) = value;
@@ -199,23 +200,67 @@ class [[nodiscard]] SmolVector final
             }
             for (size_t i = size(); i < count; ++i) {
                 if constexpr (std::is_copy_constructible_v<T>) {
-                    std::construct_at(get_ptr(inner) + i, value);
+                    std::construct_at(Impl::get_ptr() + i, value);
                 } else {
-                    std::construct_at(get_ptr(inner) + i);
+                    std::construct_at(Impl::get_ptr() + i);
                     this->at(i) = value;
                 }
             }
         }
-        inner = make_ptr(get_ptr(inner), count);
+        Impl::make_ptr(Impl::get_ptr(), count);
+    }
+
+    template <typename InputIt>
+        requires std::input_iterator<InputIt>
+    constexpr void assign(InputIt first, InputIt last)
+    {
+        const auto count = static_cast<size_t>(std::distance(first, last));
+        // Because we deduce capacity, we can only use existing memory if the new size
+        // would have the same deduced capacity.
+        if (Impl::get_capacity(count) != capacity()) {
+            reset();
+            T *new_inner = _allocator.allocate(Impl::get_capacity(count));
+            for (size_t i{}; i < count; ++i) {
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::construct_at(new_inner + i, *first++);
+                } else {
+                    std::construct_at(new_inner + i);
+                    new_inner[i] = first++;
+                }
+            }
+            Impl::make_ptr(new_inner, count);
+            return;
+        }
+        if (size() >= count) {
+            for (size_t i = count; i < size(); ++i) {
+                std::destroy_at(Impl::get_ptr() + i);
+            }
+            for (size_t i{}; i < count; ++i) {
+                this->at(i) = *first++;
+            }
+        } else {
+            for (size_t i{}; i < size(); ++i) {
+                this->at(i) = *first++;
+            }
+            for (size_t i = size(); i < count; ++i) {
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::construct_at(Impl::get_ptr() + i, *first++);
+                } else {
+                    std::construct_at(Impl::get_ptr() + i);
+                    this->at(i) = *first++;
+                }
+            }
+        }
+        Impl::make_ptr(Impl::get_ptr(), static_cast<size_t>(count));
     }
 
     [[nodiscard]] constexpr allocator_type get_allocator() const noexcept { return _allocator; }
 
-    [[nodiscard]] constexpr reference at(size_type n) { return *(get_ptr(inner) + n); }
-    [[nodiscard]] constexpr const_reference at(size_type n) const { return *(get_ptr(inner) + n); }
+    [[nodiscard]] constexpr reference at(size_type n) { return *(Impl::get_ptr() + n); }
+    [[nodiscard]] constexpr const_reference at(size_type n) const { return *(Impl::get_ptr() + n); }
 
-    [[nodiscard]] constexpr pointer data() noexcept { return get_ptr(inner); }
-    [[nodiscard]] constexpr const_pointer data() const noexcept { return get_ptr(inner); }
+    [[nodiscard]] constexpr pointer data() noexcept { return Impl::get_ptr(); }
+    [[nodiscard]] constexpr const_pointer data() const noexcept { return Impl::get_ptr(); }
 
     class [[nodiscard]] Iterator final
     {
@@ -278,20 +323,20 @@ class [[nodiscard]] SmolVector final
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    [[nodiscard]] constexpr iterator begin() noexcept { return iterator{get_ptr(inner)}; }
-    [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator{get_ptr(inner)}; }
-    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return const_iterator{get_ptr(inner)}; }
+    [[nodiscard]] constexpr iterator begin() noexcept { return iterator{Impl::get_ptr()}; }
+    [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator{Impl::get_ptr()}; }
+    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return const_iterator{Impl::get_ptr()}; }
     [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { return reverse_iterator{end()}; }
     [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator{end()}; }
     [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator{end()}; }
-    [[nodiscard]] constexpr iterator end() noexcept { return iterator{get_ptr(inner) + get_size(inner)}; }
+    [[nodiscard]] constexpr iterator end() noexcept { return iterator{Impl::get_ptr() + Impl::get_size()}; }
     [[nodiscard]] constexpr const_iterator end() const noexcept
     {
-        return const_iterator{get_ptr(inner) + get_size(inner)};
+        return const_iterator{Impl::get_ptr() + Impl::get_size()};
     }
     [[nodiscard]] constexpr const_iterator cend() const noexcept
     {
-        return const_iterator{get_ptr(inner) + get_size(inner)};
+        return const_iterator{Impl::get_ptr() + Impl::get_size()};
     }
     [[nodiscard]] constexpr reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
     [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return const_reverse_iterator{begin()}; }

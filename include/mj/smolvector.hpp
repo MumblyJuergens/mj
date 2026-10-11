@@ -458,13 +458,17 @@ class [[nodiscard]] SmolVector final : private Impl
         Impl::make_ptr(Impl::get_ptr(), s + 1);
     }
 
-    constexpr iterator insert(const_iterator position, const T &value)
+    constexpr iterator insert(const_iterator position, const T &value) { return emplace(position, value); }
+    constexpr iterator insert(const_iterator position, T &&value) { return emplace(position, std::move(value)); }
+
+    template <typename... Args>
+    constexpr iterator emplace(const_iterator position, Args &&...args)
     {
         const auto s = size();
         if (s >= capacity()) {
             grow();
         }
-        const difference_type pos = position - cbegin();
+        const difference_type pos = s == 0 ? 0 : position - cbegin();
         T *start = Impl::get_ptr();
         // If we had any items, move them along.
         // Move item at end to the new end first.
@@ -478,7 +482,7 @@ class [[nodiscard]] SmolVector final : private Impl
         }
         // Set the last moved-from at position to value.
         std::destroy_at(start + pos);
-        std::construct_at(start + pos, value);
+        std::construct_at(start + pos, std::forward<Args>(args)...);
 
         Impl::make_ptr(Impl::get_ptr(), s + 1);
         return start + pos;

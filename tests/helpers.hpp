@@ -83,18 +83,18 @@ struct [[nodiscard]] Counter final
 
     int value{};
 
-    Counter() { ++default_constructed; }
-    Counter(int _value) : value{_value} { ++value_constructed; }
-    ~Counter() { ++destructored; }
-    Counter(const Counter &rhs) : value{rhs.value} { ++copy_constructed; }
-    Counter(Counter &&rhs) : value{std::exchange(rhs.value, 0)} { ++move_constructed; }
-    Counter &operator=(const Counter &rhs)
+    Counter() noexcept { ++default_constructed; }
+    Counter(int _value) noexcept : value{_value} { ++value_constructed; }
+    ~Counter() noexcept { ++destructored; }
+    Counter(const Counter &rhs) noexcept : value{rhs.value} { ++copy_constructed; }
+    Counter(Counter &&rhs) noexcept : value{std::exchange(rhs.value, 0)} { ++move_constructed; }
+    Counter &operator=(const Counter &rhs) noexcept
     {
         value = rhs.value;
         ++copy_assigned;
         return *this;
     }
-    Counter &operator=(Counter &&rhs)
+    Counter &operator=(Counter &&rhs) noexcept
     {
         value = std::exchange(rhs.value, 0);
         ++move_assigned;

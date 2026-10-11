@@ -387,7 +387,7 @@ TEST_CASE("Clear works", "[smolvector]")
     REQUIRE(sv.empty() == true);
 }
 
-TEST_CASE("Inserting a value", "[smolvector]")
+TEST_CASE("Inserting rvalue", "[smolvector]")
 {
     mj::SmolVector<int> sv{12, 45, 98};
 
@@ -400,3 +400,20 @@ TEST_CASE("Inserting a value", "[smolvector]")
     REQUIRE(sv[2] == 45);
     REQUIRE(sv[3] == 98);
 }
+
+TEST_CASE("Inserting lvalue", "[smolvector]")
+{
+    mj::SmolVector<Counter> sv{};
+    Counter::reset();
+    Counter counter{10};
+
+    sv.insert(sv.cbegin(), std::move(counter));
+
+    REQUIRE(sv.size() == 1);
+    REQUIRE(sv.capacity() == 1);
+    REQUIRE(sv[0].value == 10);
+    REQUIRE(counter.value == 0);
+    REQUIRE(Counter::move_constructed == 1);
+}
+
+// TODO: emplace.

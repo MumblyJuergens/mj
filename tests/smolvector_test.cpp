@@ -1,11 +1,96 @@
 #include "helpers.hpp"
 #include <array>
 #include <catch2/catch_test_macros.hpp>
+#include <memory>
 #include <mj/smolvector.hpp>
+#include <ranges>
 
-TEST_CASE("construct and destruct", "[smolvector]") { mj::SmolVector<int> svint{}; }
+TEST_CASE("Construct and destruct", "[smolvector]")
+{
+    mj::SmolVector<int> svint{};
+    REQUIRE(svint.empty() == true);
+}
 
-TEST_CASE("empty test", "[smolvector]")
+TEST_CASE("Construct with allocator", "[smolvector]")
+{
+    std::allocator<int> allocator;
+    mj::SmolVector<int> svint{allocator};
+}
+
+TEST_CASE("Count default construction", "[smolvector]")
+{
+    mj::SmolVector<int> sv(5uz);
+
+    REQUIRE(sv.size() == 5);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv.empty() == false);
+    REQUIRE(sv.at(0) == 0);
+    REQUIRE(sv.at(1) == 0);
+    REQUIRE(sv.at(2) == 0);
+    REQUIRE(sv.at(3) == 0);
+    REQUIRE(sv.at(4) == 0);
+}
+
+TEST_CASE("Count value construction", "[smolvector]")
+{
+    mj::SmolVector<int> sv(4uz, 8);
+
+    REQUIRE(sv.size() == 4);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.at(0) == 8);
+    REQUIRE(sv.at(1) == 8);
+    REQUIRE(sv.at(2) == 8);
+    REQUIRE(sv.at(3) == 8);
+}
+
+TEST_CASE("Iterator construction", "[smolvector]")
+{
+    std::array<int, 3> input{9, 7, 6};
+    mj::SmolVector<int> sv{input.begin(), input.end()};
+
+    REQUIRE(sv.size() == 3);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.at(0) == 9);
+    REQUIRE(sv.at(1) == 7);
+    REQUIRE(sv.at(2) == 6);
+}
+
+TEST_CASE("Range construction", "[smolvector]")
+{
+    std::array<int, 3> input{9, 7, 6};
+    mj::SmolVector<int> sv{std::from_range, input};
+
+    REQUIRE(sv.size() == 3);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.at(0) == 9);
+    REQUIRE(sv.at(1) == 7);
+    REQUIRE(sv.at(2) == 6);
+}
+
+TEST_CASE("Initializer list construction", "[smolvector]")
+{
+    mj::SmolVector<int> sv{{9, 7, 6}};
+
+    REQUIRE(sv.size() == 3);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.at(0) == 9);
+    REQUIRE(sv.at(1) == 7);
+    REQUIRE(sv.at(2) == 6);
+}
+
+TEST_CASE("Initializer list assignment op", "[smolvector]")
+{
+    mj::SmolVector<int> sv{};
+    sv = {9, 7, 6};
+
+    REQUIRE(sv.size() == 3);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.at(0) == 9);
+    REQUIRE(sv.at(1) == 7);
+    REQUIRE(sv.at(2) == 6);
+}
+
+TEST_CASE("Empty test", "[smolvector]")
 {
     mj::SmolVector<int> svint{};
 
@@ -13,29 +98,7 @@ TEST_CASE("empty test", "[smolvector]")
     REQUIRE(svint.capacity() == 0);
 }
 
-[[nodiscard]] constexpr static size_t next_pow2(size_t s) noexcept
-{
-    s |= s >> 1;
-    s |= s >> 2;
-    s |= s >> 4;
-    s |= s >> 8;
-    s |= s >> 16;
-    return s + 1;
-}
-
-static_assert(next_pow2(0) == 1);
-static_assert(next_pow2(1) == 2);
-static_assert(next_pow2(2) == 4);
-static_assert(next_pow2(3) == 4);
-static_assert(next_pow2(4) == 8);
-static_assert(next_pow2(5) == 8);
-static_assert(next_pow2(6) == 8);
-static_assert(next_pow2(7) == 8);
-static_assert(next_pow2(8) == 16);
-static_assert(next_pow2(9) == 16);
-static_assert(next_pow2(10) == 16);
-
-TEST_CASE("push item", "[smolvector]")
+TEST_CASE("Push item", "[smolvector]")
 {
     mj::SmolVector<int> svint{};
 
@@ -45,7 +108,7 @@ TEST_CASE("push item", "[smolvector]")
     REQUIRE(svint.capacity() == 1);
 }
 
-TEST_CASE("push items", "[smolvector]")
+TEST_CASE("Push items", "[smolvector]")
 {
     mj::SmolVector<int> svint{};
 
@@ -71,7 +134,7 @@ TEST_CASE("push items", "[smolvector]")
     REQUIRE(svint.capacity() == 8);
 }
 
-TEST_CASE("move contents if noexccept move", "[smolvector]")
+TEST_CASE("Move contents if noexccept move", "[smolvector]")
 {
     mj::SmolVector<CopyAndMoveNoexcept> svint_a{};
     mj::SmolVector<CopyAndMoveNoexcept> svint_b{};
@@ -93,7 +156,7 @@ TEST_CASE("move contents if noexccept move", "[smolvector]")
     REQUIRE(svint_b.at(0).moved == 13); // 13 before, 13 after move.
 }
 
-TEST_CASE("copy contents on copy", "[smolvector]")
+TEST_CASE("Copy contents on copy", "[smolvector]")
 {
     mj::SmolVector<CopyAndMove> svint_a{};
     mj::SmolVector<CopyAndMove> svint_b{};
@@ -171,7 +234,7 @@ TEST_CASE("Const reverse iterable", "[smolvector]")
     }
 }
 
-TEST_CASE("Assing n values to empty", "[smolvector]")
+TEST_CASE("Assigning n values to empty", "[smolvector]")
 {
     mj::SmolVector<int> svint{};
 
@@ -184,7 +247,7 @@ TEST_CASE("Assing n values to empty", "[smolvector]")
     REQUIRE(svint.at(2) == 42);
 }
 
-TEST_CASE("Assing n values to lesser", "[smolvector]")
+TEST_CASE("Assigning n values to lesser", "[smolvector]")
 {
     mj::SmolVector<int> svint{};
 
@@ -200,7 +263,7 @@ TEST_CASE("Assing n values to lesser", "[smolvector]")
     REQUIRE(svint.at(4) == 126);
 }
 
-TEST_CASE("Assing n values to greater", "[smolvector]")
+TEST_CASE("Assigning n values to greater", "[smolvector]")
 {
     Counter::reset();
     CountingAllocator<Counter>::reset();
@@ -228,7 +291,7 @@ TEST_CASE("Assing n values to greater", "[smolvector]")
     REQUIRE(CountingAllocator<Counter>::deallocations == 8);
 }
 
-TEST_CASE("Assing n values to greater 32", "[smolvector]")
+TEST_CASE("Assigning n values to greater 32", "[smolvector]")
 {
     Counter::reset();
     CountingAllocator<Counter>::reset();
@@ -256,10 +319,84 @@ TEST_CASE("Assing n values to greater 32", "[smolvector]")
     REQUIRE(CountingAllocator<Counter>::deallocations == 8);
 }
 
-TEST_CASE("range assignment", "[smolvector]")
+TEST_CASE("Iterator assignment", "[smolvector]")
 {
     mj::SmolVector<int> sv{};
     std::array<int, 5> input{2, 5, 7, 9, 1};
 
     sv.assign(input.begin(), input.end());
+
+    REQUIRE(sv.size() == 5);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv.at(0) == 2);
+    REQUIRE(sv.at(1) == 5);
+    REQUIRE(sv.at(2) == 7);
+    REQUIRE(sv.at(3) == 9);
+    REQUIRE(sv.at(4) == 1);
+}
+
+TEST_CASE("Range assignment", "[smolvector]")
+{
+    mj::SmolVector<int> sv{};
+    std::array<int, 5> input{2, 5, 7, 9, 1};
+
+    sv.assign_range(input);
+
+    REQUIRE(sv.size() == 5);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv.at(0) == 2);
+    REQUIRE(sv.at(1) == 5);
+    REQUIRE(sv.at(2) == 7);
+    REQUIRE(sv.at(3) == 9);
+    REQUIRE(sv.at(4) == 1);
+}
+
+TEST_CASE("Initializer list assignment", "[smolvector]")
+{
+    mj::SmolVector<int> sv{};
+
+    sv.assign({1, 9, 7});
+
+    REQUIRE(sv.size() == 3);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv.at(0) == 1);
+    REQUIRE(sv.at(1) == 9);
+    REQUIRE(sv.at(2) == 7);
+}
+
+TEST_CASE("Front and back work", "[smolvector]")
+{
+    mj::SmolVector<int> sv{1, 9, 5, 6, 345};
+
+    REQUIRE(sv.size() == 5);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv.front() == 1);
+    REQUIRE(sv.back() == 345);
+}
+
+TEST_CASE("Clear works", "[smolvector]")
+{
+    mj::SmolVector<int> sv{1, 9, 5, 6, 345};
+    REQUIRE(sv.size() == 5);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv.empty() == false);
+
+    sv.clear();
+    REQUIRE(sv.size() == 0);
+    REQUIRE(sv.capacity() == 0);
+    REQUIRE(sv.empty() == true);
+}
+
+TEST_CASE("Inserting a value", "[smolvector]")
+{
+    mj::SmolVector<int> sv{12, 45, 98};
+
+    sv.insert(sv.cbegin(), 87);
+
+    REQUIRE(sv.size() == 4);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv[0] == 87);
+    REQUIRE(sv[1] == 12);
+    REQUIRE(sv[2] == 45);
+    REQUIRE(sv[3] == 98);
 }

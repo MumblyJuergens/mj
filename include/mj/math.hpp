@@ -28,11 +28,15 @@ template <typename T>
 template <std::unsigned_integral T>
 [[nodiscard]] constexpr static T next_pow2(T s) noexcept
 {
+    // Faster and less fiddly than bit_ceil.
     s |= s >> 1;
     s |= s >> 2;
     s |= s >> 4;
     s |= s >> 8;
     s |= s >> 16;
+    if constexpr (sizeof(s) > 2) {
+        s |= s >> 32;
+    }
     return s + 1;
 }
 

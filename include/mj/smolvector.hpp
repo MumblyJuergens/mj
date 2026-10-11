@@ -5,8 +5,13 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
+#include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <memory>
+#include <ranges>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -41,10 +46,12 @@ struct [[nodiscard]] Smol64
         inner = reinterpret_cast<T *>((reinterpret_cast<size_t>(ptr) & LOWER_48) | (sz << 48));
     }
 
-    [[nodiscard]] static size_t get_capacity(size_t n) noexcept { return next_pow2(n - 1); }
+    [[nodiscard]] constexpr static size_t get_capacity(size_t n) noexcept { return next_pow2(n - 1); }
     [[nodiscard]] size_t get_capacity() const noexcept { return get_capacity(get_size()); }
 
     [[nodiscard]] bool get_empty() const noexcept { return !inner; }
+
+    [[nodiscard]] constexpr size_t get_max_size() const noexcept { return std::numeric_limits<uint16_t>::max(); }
 };
 
 template <typename T>
@@ -75,6 +82,8 @@ struct [[nodiscard]] Smol32
     [[nodiscard]] size_t get_capacity() const noexcept { return get_capacity(get_size()); }
 
     [[nodiscard]] bool get_empty() const noexcept { return !inner; }
+
+    [[nodiscard]] size_t get_max_size() const noexcept { return std::numeric_limits<size_t>::max(); }
 };
 
 } // namespace impl
@@ -90,6 +99,16 @@ struct [[nodiscard]] Smol32
 /// Since capacity always doubles when size reaches capacity, we can
 /// calculate capacity based on the next power of two and avoid storing
 /// it, at the cost of a an occasional calculation.
+///
+/// While all attempts are made to be a drop in replacement for std::vector
+/// some methods have to be missing because capacity is deduced. These are:
+///
+/// reserve(size_type)
+/// shrink_to_fit()
+///
+/// Despite markings, the class is not necessarily constexpr. This depends
+/// on the `Impl` class used to create it, by default on 64bit machines
+/// this does bit manipulation on pointers and can't be constexpr.
 template <typename T, typename Allocator = std::allocator<T>,
           typename Impl = std::conditional_t<sizeof(size_t) == 8, impl::Smol64<T>, impl::Smol32<T>>>
 class [[nodiscard]] SmolVector final : private Impl
@@ -128,7 +147,53 @@ class [[nodiscard]] SmolVector final : private Impl
     using pointer = std::allocator_traits<Allocator>::pointer;
     using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
-    [[nodiscard]] constexpr SmolVector() noexcept = default;
+    [[nodiscard]] constexpr SmolVector() noexcept(noexcept(Allocator{})) = default;
+
+    [[nodiscard]] constexpr explicit SmolVector(const Allocator &alloc) noexcept : _allocator{alloc} {}
+
+    [[nodiscard]] constexpr explicit SmolVector(size_type count, const Allocator &alloc = Allocator{})
+        : _allocator{alloc}
+    {
+        const size_t new_capacity = next_pow2(count);
+        T *new_inner = _allocator.allocate(new_capacity);
+        for (size_t i{}; i < count; ++i) {
+            std::construct_at(new_inner + i);
+        }
+        Impl::make_ptr(new_inner, count);
+        assert(new_inner == Impl::get_ptr());
+    }
+
+    [[nodiscard]] constexpr SmolVector(size_type count, const T &value, const Allocator &alloc = Allocator{})
+        : _allocator{alloc}
+    {
+        const size_t new_capacity = next_pow2(count);
+        T *new_inner = _allocator.allocate(new_capacity);
+        for (size_t i{}; i < count; ++i) {
+            std::construct_at(new_inner + i, value);
+        }
+        Impl::make_ptr(new_inner, count);
+        assert(new_inner == Impl::get_ptr());
+    }
+
+    template <typename InputIt>
+    [[nodiscard]] constexpr SmolVector(InputIt first, InputIt last, const Allocator &alloc = Allocator{})
+        : _allocator{alloc}
+    {
+        const size_t count = static_cast<size_t>(std::distance(first, last));
+        const size_t new_capacity = next_pow2(count);
+        T *new_inner = _allocator.allocate(new_capacity);
+        for (size_t i{}; i < count; ++i) {
+            std::construct_at(new_inner + i, *first++);
+        }
+        Impl::make_ptr(new_inner, count);
+        assert(new_inner == Impl::get_ptr());
+    }
+
+    template <typename Range>
+    [[nodiscard]] constexpr SmolVector(std::from_range_t, Range &&rg, const Allocator &alloc = Allocator{})
+        : SmolVector{std::ranges::begin(rg), std::ranges::end(rg), alloc}
+    {
+    }
 
     [[nodiscard]] constexpr SmolVector(SmolVector &&other) noexcept { *this = std::move(other); }
     constexpr SmolVector &operator=(SmolVector &&rhs) noexcept
@@ -141,33 +206,40 @@ class [[nodiscard]] SmolVector final : private Impl
     [[nodiscard]] constexpr SmolVector(const SmolVector &other) { *this = other; }
     constexpr SmolVector &operator=(const SmolVector &rhs)
     {
-        reset();
-        T *from = rhs.Impl::get_ptr();
-        const size_t from_size = rhs.size();
-        const size_t from_capacity = next_pow2(from_size);
-        T *to = _allocator.allocate(from_capacity);
-        for (size_t i{}; i < from_size; ++i) {
-            std::construct_at(to + i, *(from + i));
-        }
-        Impl::make_ptr(to, from_size);
+        assign_range(rhs);
         return *this;
+    }
+
+    [[nodiscard]] constexpr SmolVector(const SmolVector &other, const std::type_identity_t<Allocator> &alloc)
+        : _allocator{alloc}
+    {
+        *this = other;
+    }
+
+    [[nodiscard]] constexpr SmolVector(SmolVector &&other, const std::type_identity_t<Allocator> &alloc) noexcept
+        : _allocator{alloc}
+    {
+        *this = std::move(other);
+    }
+
+    constexpr SmolVector &operator=(std::initializer_list<T> list)
+    {
+        assign(list);
+        return *this;
+    }
+
+    [[nodiscard]] constexpr SmolVector(std::initializer_list<T> list, const Allocator &alloc = Allocator{})
+        : _allocator{alloc}
+    {
+        *this = list;
     }
 
     constexpr ~SmolVector() { reset(); }
 
     [[nodiscard]] constexpr size_t size() const noexcept { return Impl::get_size(); }
     [[nodiscard]] constexpr int isize() const noexcept { return mj::isize(*this); }
+    [[nodiscard]] constexpr size_t max_size() const noexcept { return Impl::get_max_size(); }
     [[nodiscard]] constexpr size_t capacity() const noexcept { return Impl::get_capacity(); }
-
-    constexpr void push_back(const T &value)
-    {
-        const auto s = size();
-        if (s >= capacity()) {
-            grow();
-        }
-        Impl::make_ptr(Impl::get_ptr(), s + 1);
-        *(Impl::get_ptr() + s) = value;
-    }
 
     constexpr void assign(size_t count, const T &value)
     {
@@ -254,15 +326,49 @@ class [[nodiscard]] SmolVector final : private Impl
         Impl::make_ptr(Impl::get_ptr(), static_cast<size_t>(count));
     }
 
+    constexpr void assign(std::initializer_list<T> ilist) { assign(ilist.begin(), ilist.end()); }
+
+    template <typename Range>
+    constexpr void assign_range(Range &&range)
+    {
+        assign(std::ranges::begin(range), std::ranges::end(range));
+    }
+
     [[nodiscard]] constexpr allocator_type get_allocator() const noexcept { return _allocator; }
 
-    [[nodiscard]] constexpr reference at(size_type n) { return *(Impl::get_ptr() + n); }
-    [[nodiscard]] constexpr const_reference at(size_type n) const { return *(Impl::get_ptr() + n); }
+    [[nodiscard]] constexpr reference at(size_type n)
+    {
+        if (n >= size()) {
+            throw std::out_of_range{"Item out of range in SmolVector"};
+        }
+        return *(Impl::get_ptr() + n);
+    }
+
+    [[nodiscard]] constexpr const_reference at(size_type n) const
+    {
+        if (n >= size()) {
+            throw std::out_of_range{"Item out of range in SmolVector"};
+        }
+        return *(Impl::get_ptr() + n);
+    }
+
+    [[nodiscard]] constexpr reference operator[](size_type n) { return *(Impl::get_ptr() + n); }
+    [[nodiscard]] constexpr const_reference operator[](size_type n) const { return *(Impl::get_ptr() + n); }
+
+    [[nodiscard]] constexpr reference front() { return *(Impl::get_ptr()); }
+    [[nodiscard]] constexpr const_reference front() const { return *(Impl::get_ptr()); }
+
+    [[nodiscard]] constexpr reference back() { return *(Impl::get_ptr() + size() - 1); }
+    [[nodiscard]] constexpr const_reference back() const { return *(Impl::get_ptr() + size() - 1); }
 
     [[nodiscard]] constexpr pointer data() noexcept { return Impl::get_ptr(); }
     [[nodiscard]] constexpr const_pointer data() const noexcept { return Impl::get_ptr(); }
 
-    class [[nodiscard]] Iterator final
+    [[nodiscard]] constexpr bool empty() const noexcept { return Impl::get_empty(); }
+
+    constexpr void clear() noexcept { reset(); }
+
+    class Iterator final
     {
         T *it{};
 
@@ -341,6 +447,42 @@ class [[nodiscard]] SmolVector final : private Impl
     [[nodiscard]] constexpr reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
     [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return const_reverse_iterator{begin()}; }
     [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return const_reverse_iterator{begin()}; }
+
+    constexpr void push_back(const T &value)
+    {
+        const auto s = size();
+        if (s >= capacity()) {
+            grow();
+        }
+        std::construct_at(Impl::get_ptr() + s, value);
+        Impl::make_ptr(Impl::get_ptr(), s + 1);
+    }
+
+    constexpr iterator insert(const_iterator position, const T &value)
+    {
+        const auto s = size();
+        if (s >= capacity()) {
+            grow();
+        }
+        const difference_type pos = position - cbegin();
+        T *start = Impl::get_ptr();
+        // If we had any items, move them along.
+        // Move item at end to the new end first.
+        if (s != 0) {
+            std::construct_at(start + s, std::move_if_noexcept(*(start + s - 1)));
+            // Move the rest along one.
+            for (auto it = start + s - 1; it > start + pos; --it) {
+                std::destroy_at(it);
+                std::construct_at(it, std::move_if_noexcept(*(it - 1)));
+            }
+        }
+        // Set the last moved-from at position to value.
+        std::destroy_at(start + pos);
+        std::construct_at(start + pos, value);
+
+        Impl::make_ptr(Impl::get_ptr(), s + 1);
+        return start + pos;
+    }
 };
 
 static_assert(std::weakly_incrementable<SmolVector<int>::Iterator>);

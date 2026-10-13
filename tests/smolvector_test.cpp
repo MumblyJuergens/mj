@@ -416,4 +416,52 @@ TEST_CASE("Inserting lvalue", "[smolvector]")
     REQUIRE(Counter::move_constructed == 1);
 }
 
+TEST_CASE("Inserting rvalue with amount 1 at begin", "[smolvector]")
+{
+    mj::SmolVector<int, std::allocator<int>, mj::impl::Smol32<int>> sv{12, 45, 98};
+
+    sv.insert(sv.cbegin(), 1, 87);
+
+    REQUIRE(sv.size() == 4);
+    REQUIRE(sv.capacity() == 4);
+    REQUIRE(sv[0] == 87);
+    REQUIRE(sv[1] == 12);
+    REQUIRE(sv[2] == 45);
+    REQUIRE(sv[3] == 98);
+}
+
+TEST_CASE("Inserting rvalue with amount 3 in center", "[smolvector]")
+{
+    mj::SmolVector<int, std::allocator<int>, mj::impl::Smol32<int>> sv{12, 45, 98};
+
+    sv.insert(sv.cbegin() + 1, 3, 87);
+
+    REQUIRE(sv.size() == 6);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv[0] == 12);
+    REQUIRE(sv[1] == 87);
+    REQUIRE(sv[2] == 87);
+    REQUIRE(sv[3] == 87);
+    REQUIRE(sv[4] == 45);
+    REQUIRE(sv[5] == 98);
+}
+
+TEST_CASE("Inserting rvalue with amount 5 at end", "[smolvector]")
+{
+    mj::SmolVector<int, std::allocator<int>, mj::impl::Smol32<int>> sv{12, 45, 98};
+
+    sv.insert(sv.cend(), 5, 87);
+
+    REQUIRE(sv.size() == 8);
+    REQUIRE(sv.capacity() == 8);
+    REQUIRE(sv[0] == 12);
+    REQUIRE(sv[1] == 45);
+    REQUIRE(sv[2] == 98);
+    REQUIRE(sv[3] == 87);
+    REQUIRE(sv[4] == 87);
+    REQUIRE(sv[5] == 87);
+    REQUIRE(sv[6] == 87);
+    REQUIRE(sv[7] == 87);
+}
+
 // TODO: emplace.

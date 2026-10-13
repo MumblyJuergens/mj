@@ -10,6 +10,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <type_traits>
@@ -123,10 +124,19 @@ class [[nodiscard]] SmolVector final : private Impl
         Impl::make_ptr(nullptr, 0);
     }
 
-    constexpr void grow()
+    /**
+     * @brief Grows the storage to the requested size.
+     *
+     * Note that after this method, the capacity deduced may be utterly wrong for the size
+     * value. That is the calling methods problem.
+     *
+     * @param needed The minimum capacity required. Leaving as the default nullopt
+     * is safest for most uses, causes growing to the next size up.
+     */
+    constexpr void grow(std::optional<size_t> needed = std::nullopt)
     {
         const size_t old_size = size();
-        const size_t new_capacity = next_pow2(old_size);
+        const size_t new_capacity = next_pow2(needed.value_or(old_size));
         T *new_inner = _allocator.allocate(new_capacity);
         for (size_t i{}; i < old_size; ++i) {
             // new (new_inner + 1) T{};
@@ -461,9 +471,81 @@ class [[nodiscard]] SmolVector final : private Impl
     constexpr iterator insert(const_iterator position, const T &value) { return emplace(position, value); }
     constexpr iterator insert(const_iterator position, T &&value) { return emplace(position, std::move(value)); }
 
+    constexpr iterator insert(const_iterator position, size_type count, const T &value)
+    {
+        // Note: Nearly identical to some other insert/emplace methods, keep all updated.
+        const auto current_size = size();
+        const auto future_size = next_pow2(current_size + count);
+        T *new_alloc = _allocator.allocate(future_size);
+        const difference_type pos = current_size == 0 ? 0 : position - cbegin();
+        T *start = Impl::get_ptr();
+
+        // Assuming we need to reallocate and grow memory for now.
+        // Move any items before pos to the same position in the new memory.
+        move_construct(start, start + pos, new_alloc);
+        // Move any items after pos leaving space for new items.
+        move_construct(start + pos, start + current_size, new_alloc + pos + count);
+        // And construct the new items in the gap.
+        construct_n_at(new_alloc + pos, new_alloc + pos + count, value);
+
+        reset();
+        Impl::make_ptr(new_alloc, current_size + count);
+        return start + pos;
+
+        // // If we had any items, move them along.
+        // // Move item at end to the new end first.
+        // if (current_size != 0) {
+        //     // Move everything count along, if it is under current_size, move into the moved from item or
+        //     // destroy the sitting one first......
+        //     for (auto from = start + current_size - 1, to = start + future_size - 1; from > start + pos; from--,
+        //     to--) {
+        //         // If we have a moved-from item in this slot.
+        //         if (to < start + current_size) {
+        //             if constexpr (std::is_move_assignable_v<T>) {
+        //                 *to = std::move_if_noexcept(*from);
+        //             } else {
+        //                 std::destroy_at(to);
+        //                 std::construct_at(to, std::move_if_noexcept(*from));
+        //             }
+        //         } else {
+        //             std::construct_at(to, std::move_if_noexcept(*from));
+        //         }
+        //     }
+        // }
+        // for (auto to = start + pos; to < start + pos + count; ++to) {
+        //     // If we have a moved-from item in this slot.
+        //     if (to < start + current_size) {
+        //         std::destroy_at(to);
+        //     }
+        //     std::construct_at(to, value);
+        // }
+        //
+        // Impl::make_ptr(Impl::get_ptr(), future_size);
+        // return start + pos;
+    }
+
+    template <class InputIt, class OutputIt>
+    OutputIt move_construct(InputIt first, InputIt last, OutputIt d_first)
+    {
+        for (; first != last; ++d_first, ++first) {
+            std::construct_at(d_first, std::move(*first));
+        }
+        return d_first;
+    }
+
+    template <typename OutputIt, typename... Args>
+    OutputIt construct_n_at(OutputIt first, OutputIt last, Args &&...args)
+    {
+        for (; first != last; ++first) {
+            std::construct_at(first, std::forward<Args>(args)...);
+        }
+        return first;
+    }
+
     template <typename... Args>
     constexpr iterator emplace(const_iterator position, Args &&...args)
     {
+        // Note: Nearly identical to some other insert/emplace methods, keep all updated.
         const auto s = size();
         if (s >= capacity()) {
             grow();

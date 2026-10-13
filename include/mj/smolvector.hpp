@@ -119,8 +119,10 @@ class [[nodiscard]] SmolVector final : private Impl
     constexpr void reset()
     {
         if (Impl::get_empty()) return;
-        std::destroy_n(Impl::get_ptr(), size());
-        _allocator.deallocate(Impl::get_ptr(), capacity());
+        const auto s = size();
+        const auto c = capacity();
+        std::destroy_n(Impl::get_ptr(), s);
+        _allocator.deallocate(Impl::get_ptr(), c);
         Impl::make_ptr(nullptr, 0);
     }
 
@@ -164,7 +166,7 @@ class [[nodiscard]] SmolVector final : private Impl
     [[nodiscard]] constexpr explicit SmolVector(size_type count, const Allocator &alloc = Allocator{})
         : _allocator{alloc}
     {
-        const size_t new_capacity = next_pow2(count);
+        const size_t new_capacity = Impl::get_capacity(count);
         T *new_inner = _allocator.allocate(new_capacity);
         for (size_t i{}; i < count; ++i) {
             std::construct_at(new_inner + i);
@@ -176,7 +178,7 @@ class [[nodiscard]] SmolVector final : private Impl
     [[nodiscard]] constexpr SmolVector(size_type count, const T &value, const Allocator &alloc = Allocator{})
         : _allocator{alloc}
     {
-        const size_t new_capacity = next_pow2(count);
+        const size_t new_capacity = Impl::get_capacity(count);
         T *new_inner = _allocator.allocate(new_capacity);
         for (size_t i{}; i < count; ++i) {
             std::construct_at(new_inner + i, value);
@@ -190,7 +192,7 @@ class [[nodiscard]] SmolVector final : private Impl
         : _allocator{alloc}
     {
         const size_t count = static_cast<size_t>(std::distance(first, last));
-        const size_t new_capacity = next_pow2(count);
+        const size_t new_capacity = Impl::get_capacity(count);
         T *new_inner = _allocator.allocate(new_capacity);
         for (size_t i{}; i < count; ++i) {
             std::construct_at(new_inner + i, *first++);
@@ -475,62 +477,57 @@ class [[nodiscard]] SmolVector final : private Impl
     {
         // Note: Nearly identical to some other insert/emplace methods, keep all updated.
         const auto current_size = size();
-        const auto future_size = next_pow2(current_size + count);
-        T *new_alloc = _allocator.allocate(future_size);
+        const auto current_capacity = capacity();
+        const auto future_capacity = Impl::get_capacity(current_size + count);
         const difference_type pos = current_size == 0 ? 0 : position - cbegin();
         T *start = Impl::get_ptr();
+        T *target = start;
 
-        // Assuming we need to reallocate and grow memory for now.
-        // Move any items before pos to the same position in the new memory.
-        move_construct(start, start + pos, new_alloc);
-        // Move any items after pos leaving space for new items.
-        move_construct(start + pos, start + current_size, new_alloc + pos + count);
-        // And construct the new items in the gap.
-        construct_n_at(new_alloc + pos, new_alloc + pos + count, value);
+        if (current_capacity != future_capacity) {
+            target = _allocator.allocate(future_capacity);
+            // Move any items before pos to the same position in the new memory.
+            move_if_noexcept_construct(start, start + pos, target);
+            // Move any items after pos leaving space for new items.
+            move_if_noexcept_construct(start + pos, start + current_size, target + pos + count);
+            // And construct the new items in the gap.
+            construct_n_at(target + pos, target + pos + count, value);
+            reset();
+        } else {
+            // Move items after the position, constructing if empty space.
+            move_if_noexcept_construct_reverse(start + pos, start + current_size, target + current_size + count);
+            // And construct the new items in the gap.
+            construct_n_at(target + pos, target + pos + count, value);
+        }
 
-        reset();
-        Impl::make_ptr(new_alloc, current_size + count);
-        return start + pos;
-
-        // // If we had any items, move them along.
-        // // Move item at end to the new end first.
-        // if (current_size != 0) {
-        //     // Move everything count along, if it is under current_size, move into the moved from item or
-        //     // destroy the sitting one first......
-        //     for (auto from = start + current_size - 1, to = start + future_size - 1; from > start + pos; from--,
-        //     to--) {
-        //         // If we have a moved-from item in this slot.
-        //         if (to < start + current_size) {
-        //             if constexpr (std::is_move_assignable_v<T>) {
-        //                 *to = std::move_if_noexcept(*from);
-        //             } else {
-        //                 std::destroy_at(to);
-        //                 std::construct_at(to, std::move_if_noexcept(*from));
-        //             }
-        //         } else {
-        //             std::construct_at(to, std::move_if_noexcept(*from));
-        //         }
-        //     }
-        // }
-        // for (auto to = start + pos; to < start + pos + count; ++to) {
-        //     // If we have a moved-from item in this slot.
-        //     if (to < start + current_size) {
-        //         std::destroy_at(to);
-        //     }
-        //     std::construct_at(to, value);
-        // }
-        //
-        // Impl::make_ptr(Impl::get_ptr(), future_size);
-        // return start + pos;
+        Impl::make_ptr(target, current_size + count);
+        return target + pos;
     }
 
     template <class InputIt, class OutputIt>
-    OutputIt move_construct(InputIt first, InputIt last, OutputIt d_first)
+    OutputIt move_if_noexcept_construct(InputIt first, InputIt last, OutputIt d_first)
     {
         for (; first != last; ++d_first, ++first) {
-            std::construct_at(d_first, std::move(*first));
+            std::construct_at(d_first, std::move_if_noexcept(*first));
         }
         return d_first;
+    }
+
+    // Assumes iterators can be mathed upon verily.
+    template <typename It>
+    It move_if_noexcept_construct_reverse(It first, It last, It d_last)
+    {
+        auto original_last = last;
+        --last;
+        --first;
+        --d_last;
+        for (; first != last; --d_last, --last) {
+            if (d_last > original_last) {
+                std::construct_at(d_last, std::move_if_noexcept(*last));
+            } else {
+                *d_last = std::move_if_noexcept(*last);
+            }
+        }
+        return d_last;
     }
 
     template <typename OutputIt, typename... Args>

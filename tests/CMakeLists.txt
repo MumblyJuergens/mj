@@ -15,7 +15,8 @@ add_executable(${PROJECT_NAME}_test
     "helpers.hpp"
 )
 target_compile_features(${PROJECT_NAME}_test PUBLIC cxx_std_23)
-target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME} Catch2::Catch2WithMain)
+target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME} Catch2::Catch2WithMain asan)
+target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=leak,address)
 MJFullCompilerWarnings(${PROJECT_NAME}_test)
 MJSanitize(${PROJECT_NAME}_test ON ON ON OFF OFF)
 

@@ -418,7 +418,7 @@ TEST_CASE("Inserting lvalue", "[smolvector]")
 
 TEST_CASE("Inserting rvalue with amount 1 at begin", "[smolvector]")
 {
-    mj::SmolVector<int, std::allocator<int>, mj::impl::Smol32<int>> sv{12, 45, 98};
+    mj::SmolVector<int> sv{12, 45, 98};
 
     sv.insert(sv.cbegin(), 1, 87);
 
@@ -432,7 +432,7 @@ TEST_CASE("Inserting rvalue with amount 1 at begin", "[smolvector]")
 
 TEST_CASE("Inserting rvalue with amount 3 in center", "[smolvector]")
 {
-    mj::SmolVector<int, std::allocator<int>, mj::impl::Smol32<int>> sv{12, 45, 98};
+    mj::SmolVector<int> sv{12, 45, 98};
 
     sv.insert(sv.cbegin() + 1, 3, 87);
 
@@ -448,7 +448,7 @@ TEST_CASE("Inserting rvalue with amount 3 in center", "[smolvector]")
 
 TEST_CASE("Inserting rvalue with amount 5 at end", "[smolvector]")
 {
-    mj::SmolVector<int, std::allocator<int>, mj::impl::Smol32<int>> sv{12, 45, 98};
+    mj::SmolVector<int> sv{12, 45, 98};
 
     sv.insert(sv.cend(), 5, 87);
 

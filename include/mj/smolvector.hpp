@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mj/algorithm.hpp"
 #include "mj/math.hpp"
 #include "mj/size.hpp"
 #include <cassert>
@@ -501,33 +502,6 @@ class [[nodiscard]] SmolVector final : private Impl
 
         Impl::make_ptr(target, current_size + count);
         return target + pos;
-    }
-
-    template <class InputIt, class OutputIt>
-    OutputIt move_if_noexcept_construct(InputIt first, InputIt last, OutputIt d_first)
-    {
-        for (; first != last; ++d_first, ++first) {
-            std::construct_at(d_first, std::move_if_noexcept(*first));
-        }
-        return d_first;
-    }
-
-    // Assumes iterators can be mathed upon verily.
-    template <typename It>
-    It move_if_noexcept_construct_reverse(It first, It last, It d_last)
-    {
-        auto original_last = last;
-        --last;
-        --first;
-        --d_last;
-        for (; first != last; --d_last, --last) {
-            if (d_last > original_last) {
-                std::construct_at(d_last, std::move_if_noexcept(*last));
-            } else {
-                *d_last = std::move_if_noexcept(*last);
-            }
-        }
-        return d_last;
     }
 
     template <typename OutputIt, typename... Args>
